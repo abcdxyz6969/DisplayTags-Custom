@@ -1,69 +1,123 @@
 package me.itsskeptical.displaytags.entities;
 
+import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.protocol.entity.data.EntityData;
 import com.github.retrooper.packetevents.protocol.entity.data.EntityDataTypes;
+import com.github.retrooper.packetevents.protocol.entity.type.EntityType;
 import com.github.retrooper.packetevents.util.Vector3f;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerDestroyEntities;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerEntityMetadata;
+import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSpawnEntity;
 import org.bukkit.Location;
-import org.bukkit.entity.EntityType;
-import org.bukkit.util.Vector;
+import org.bukkit.entity.Player;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
-public class ClientDisplay extends ClientEntity {
-    private Vector3f translation;
-    private Vector3f scale;
-    private DisplayBillboard billboard;
+public abstract class ClientDisplay {
 
-    public ClientDisplay(EntityType type, Location location) {
-        super(type, location);
+    protected final int entityId;
+    protected final EntityType type;
+    protected final Location location;
+
+    protected Vector3f translation = new Vector3f(0f, 0f, 0f);
+    protected Vector3f scale = new Vector3f(1f, 1f, 1f);
+
+    protected ClientDisplay(EntityType type, Location location) {
+        this.entityId = ThreadLocalRandom.current().nextInt(1_000_000, Integer.MAX_VALUE);
+        this.type = type;
+        this.location = location.clone();
     }
 
-    public Vector3f getTranslation() {
-        return this.translation;
-    }
+    /* =========================
+       Abstract
+       ========================= */
+
+    public abstract List<EntityData<?>> getEntityData();
+
+    /* =========================
+       Setters
+       ========================= */
 
     public void setTranslation(Vector3f translation) {
         this.translation = translation;
     }
 
-    public Vector3f getScale() {
-        return scale;
+    public void setScale(Vector3f scale) {
+        this.scale = scale;
     }
 
-    public void setScale(Vector scale) {
-        this.scale = new Vector3f().add(
-                (float) scale.getX(),
-                (float) scale.getY(),
-                (float) scale.getZ()
-        );
+    /* =========================
+       Spawn
+       ========================= */
+
+    public void spawn(Player player) {
+        WrapperPlayServerSpawnEntity spawnPacket =
+                new WrapperPlayServerSpawnEntity(
+                        entityId,
+                        type,
+                        location.getX(),
+                        location.getY(),
+                        location.getZ(),
+                        0f,
+                        0f
+                );
+
+        PacketEvents.getAPI()
+                .getPlayerManager()
+                .sendPacket(player, spawnPacket);
+
+        sendMetadata(player);
     }
 
-    public DisplayBillboard getBillboard() {
-        return this.billboard;
-    }
+    /* =========================
+       Metadata
+       ========================= */
 
-    public void setBillboard(DisplayBillboard billboard) {
-        this.billboard = billboard;
-    }
+    protected void sendMetadata(Player player) {
+        List<EntityData<?>> data = new ArrayList<>(getEntityData());
 
-    @Override
-    public List<EntityData<?>> getEntityData() {
-        List<EntityData<?>> data = super.getEntityData();
-        if (this.scale != null) data.add(new EntityData<>(
-                12,
-                EntityDataTypes.VECTOR3F,
-                this.scale
-        ));
-        if (this.translation != null) data.add(new EntityData<>(
+        // Translation
+        data.add(new EntityData<>(
                 11,
                 EntityDataTypes.VECTOR3F,
-                this.translation
+                translation
         ));
-        if (this.billboard != null) data.add(new EntityData<>(
-                15,
-                EntityDataTypes.BYTE,
-                (byte) this.billboard.value
+
+        // Scale
+        data.add(new EntityData<>(
+                12,
+                EntityDataTypes.VECTOR3F,
+                scale
         ));
-        return data;
+
+        WrapperPlayServerEntityMetadata metadataPacket =
+                new WrapperPlayServerEntityMetadata(entityId, data);
+
+        PacketEvents.getAPI()
+                .getPlayerManager()
+                .sendPacket(player, metadataPacket);
+    }
+
+    /* =========================
+       Despawn
+       ========================= */
+
+    public void despawn(Player player) {
+        WrapperPlayServerDestroyEntities destroyPacket =
+                new WrapperPlayServerDestroyEntities(entityId);
+
+        PacketEvents.getAPI()
+                .getPlayerManager()
+                .sendPacket(player, destroyPacket);
+    }
+
+    /* =========================
+       Getter
+       ========================= */
+
+    public int getEntityId() {
+        return entityId;
     }
 }
