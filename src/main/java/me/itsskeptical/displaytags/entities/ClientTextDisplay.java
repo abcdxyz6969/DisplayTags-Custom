@@ -4,7 +4,7 @@ import com.github.retrooper.packetevents.protocol.entity.data.EntityData;
 import com.github.retrooper.packetevents.protocol.entity.data.EntityDataTypes;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
-import org.bukkit.entity.EntityType;
+import com.github.retrooper.packetevents.protocol.entity.type.EntityType;
 
 import java.util.List;
 
