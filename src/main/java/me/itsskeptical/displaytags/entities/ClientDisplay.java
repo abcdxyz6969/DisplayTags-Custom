@@ -54,15 +54,16 @@ public abstract class ClientDisplay {
 
     public void spawn(Player player) {
         WrapperPlayServerSpawnEntity spawnPacket =
-                new WrapperPlayServerSpawnEntity(
-                        entityId,
-                        type,
-                        location.getX(),
-                        location.getY(),
-                        location.getZ(),
-                        0f,
-                        0f
-                );
+        new WrapperPlayServerSpawnEntity(
+                entityId,
+                null,
+                type,
+                location.getX(),
+                location.getY(),
+                location.getZ(),
+                0f,
+                0f
+        );
 
         PacketEvents.getAPI()
                 .getPlayerManager()
