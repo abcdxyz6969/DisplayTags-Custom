@@ -1,8 +1,15 @@
 name: Build Plugin
 
 on:
-  release:
-    types: [created]
+  push:
+    paths:
+      - 'src/**'
+      - 'build.gradle'
+      - 'build.gradle.kts'
+      - 'settings.gradle'
+      - 'gradle/**'
+      - 'gradlew'
+      - 'gradlew.bat'
   workflow_dispatch:
 
 jobs:
@@ -16,7 +23,7 @@ jobs:
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
 
       - name: Setup Gradle
