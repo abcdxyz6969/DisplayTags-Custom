@@ -18,6 +18,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+# let build
+
 public class ClientEntity {
     private final int entityId;
     private final UUID uuid;
