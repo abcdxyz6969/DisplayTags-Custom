@@ -29,7 +29,7 @@ public abstract class ClientEntity {
 
     /* =========================
        Spawn
-       ========================= */
+       ======================== */
     public void spawn(Player player) {
         WrapperPlayServerSpawnEntity spawn = new WrapperPlayServerSpawnEntity(
                 entityId,
