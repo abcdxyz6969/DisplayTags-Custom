@@ -60,6 +60,16 @@ nametags:
 
     # The scale of the nametag's display.
     # This can be used to change the size of the nametag.
+
+    nametag:
+      scale: 0.7
+      base-y-offset: 0.35
+
+     line-y-offsets:
+       1: 0.0
+       2: -0.05
+
+    
     scale:
       x: 1
       y: 1
