@@ -1,4 +1,4 @@
-name: Publish to Modrinth
+name: Build Plugin
 
 on:
   release:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  publish:
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -28,7 +28,8 @@ jobs:
       - name: Build Plugin
         run: ./gradlew build
 
-      - name: Publish to Modrinth
-        env:
-          MODRINTH_TOKEN: ${{ secrets.MODRINTH_TOKEN }}
-        run: ./gradlew modrinth
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: plugin-jar
+          path: build/libs/*.jar
