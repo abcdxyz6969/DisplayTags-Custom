@@ -3,199 +3,177 @@ package me.itsskeptical.displaytags.nametags;
 import com.github.retrooper.packetevents.PacketEvents;
 import com.github.retrooper.packetevents.util.Vector3f;
 import com.github.retrooper.packetevents.wrapper.play.server.WrapperPlayServerSetPassengers;
-import me.clip.placeholderapi.PlaceholderAPI;
 import me.itsskeptical.displaytags.DisplayTags;
-import me.itsskeptical.displaytags.config.NametagConfig;
 import me.itsskeptical.displaytags.entities.ClientTextDisplay;
-import me.itsskeptical.displaytags.utils.ComponentUtils;
-import me.itsskeptical.displaytags.utils.handlers.NametagHandler;
-import me.itsskeptical.displaytags.utils.helpers.DependencyHelper;
 import net.kyori.adventure.text.Component;
-import org.bukkit.Bukkit;
-import org.bukkit.Color;
-import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
-import org.bukkit.util.Vector;
 
-import java.text.DecimalFormat;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
-/**
- * Custom nametag implementation using TEXT_DISPLAY entities.
- * Each configured line is rendered as a separate Text Display so backgrounds are separated per-line.
- */
 public class Nametag {
 
     private final DisplayTags plugin;
     private final Player player;
-    private final List<ClientTextDisplay> displays;
-    private final Set<UUID> viewers;
 
-    private final List<String> lines;
-    private final boolean hideSelf;
-    private final int visibilityDistance;
+    private final List<ClientTextDisplay> displays = new ArrayList<>();
 
-    // Vanilla-like spacing. This is applied in addition to the passenger mount position.
-    private static final float BASE_Y = 0.25f;
-    private static final float LINE_SPACING = 0.23f;
+    // Vanilla-like spacing
+    private static final double LINE_SPACING = 0.23;
 
-    public Nametag(Player player) {
-        this.plugin = DisplayTags.getInstance();
+    public Nametag(DisplayTags plugin, Player player) {
+        this.plugin = plugin;
         this.player = player;
-        this.viewers = new HashSet<>();
-
-        NametagConfig config = plugin.config().getNametagConfig();
-        this.lines = config.getLines();
-        this.hideSelf = config.shouldHideSelf();
-        this.visibilityDistance = config.getVisibilityDistance();
-
-        // Build one TextDisplay per configured line (at least one)
-        int lineCount = Math.max(1, this.lines.size());
-        this.displays = new ArrayList<>(lineCount);
-
-        Location baseLoc = player.getLocation().setRotation(0, 0);
-        Vector scale = config.getScale();
-        float spacing = LINE_SPACING * (float) scale.getY();
-        float startY = BASE_Y + ((lineCount - 1) * spacing / 2.0f);
-
-        for (int i = 0; i < lineCount; i++) {
-            ClientTextDisplay display = new ClientTextDisplay(baseLoc);
-
-            display.setTranslation(new Vector3f(0, startY - (i * spacing), 0));
-            display.setScale(scale);
-            display.setTextShadow(config.hasTextShadow());
-            display.setTextAlignment(config.getTextAlignment());
-            display.setSeeThrough(config.isSeeThrough());
-            display.setBillboard(config.getBillboard());
-            display.setBackground(getBackground());
-
-            this.displays.add(display);
-        }
     }
+
+    /* =========================
+       Getters
+       ========================= */
 
     public Player getPlayer() {
         return player;
     }
 
-    public void showForAll() {
-        for (Player viewer : Bukkit.getOnlinePlayers()) {
-            this.show(viewer);
-        }
-    }
-
-    public void hideForAll() {
-        for (Player viewer : Bukkit.getOnlinePlayers()) {
-            this.hide(viewer);
-        }
-    }
-
-    public void updateVisibilityForAll() {
-        Location baseLoc = player.getLocation().setRotation(0, 0);
-        for (ClientTextDisplay display : displays) {
-            display.setLocation(baseLoc);
-        }
-
-        viewers.removeIf((uuid) -> {
-            Player viewer = Bukkit.getPlayer(uuid);
-            return viewer == null || !viewer.isOnline();
-        });
-
-        for (Player viewer : Bukkit.getOnlinePlayers()) {
-            boolean shouldSee = shouldSee(viewer);
-            boolean isSeeing = this.viewers.contains(viewer.getUniqueId());
-
-            if (shouldSee && !isSeeing) {
-                this.show(viewer);
-            } else if (!shouldSee && isSeeing) {
-                this.hide(viewer);
-            } else if (shouldSee) {
-                this.update(viewer);
-            }
-        }
-    }
-
-    private boolean shouldSee(Player viewer) {
-        if (viewer == null || !viewer.isOnline() || viewer.isDead()) return false;
-        if (hideSelf && player.getUniqueId().equals(viewer.getUniqueId())) return false;
-        if (player.isDead() || player.getGameMode().equals(GameMode.SPECTATOR)) return false;
-        if (!viewer.getWorld().getName().equals(player.getWorld().getName())) return false;
-        if (player.isInvisible() || !viewer.canSee(player)) return false;
-
-        return viewer.getLocation().distanceSquared(player.getLocation()) < visibilityDistance * visibilityDistance;
-    }
+    /* =========================
+       Visibility – per player
+       ========================= */
 
     public void show(Player viewer) {
-        NametagHandler.hide(player, viewer);
-        if (hideSelf && player.getUniqueId().equals(viewer.getUniqueId())) return;
-
-        this.viewers.add(viewer.getUniqueId());
-        for (ClientTextDisplay display : displays) {
-            display.spawn(viewer);
-        }
-        this.update(viewer);
+        spawnFor(viewer, plugin.getNametagManager().getLines(player));
     }
 
     public void hide(Player viewer) {
-        this.viewers.remove(viewer.getUniqueId());
-        for (ClientTextDisplay display : displays) {
-            display.despawn(viewer);
+        despawnFor(viewer);
+    }
+
+    /* =========================
+       Visibility – all
+       ========================= */
+
+    public void showForAll() {
+        spawn(plugin.getNametagManager().getLines(player));
+    }
+
+    public void hideForAll() {
+        despawn();
+    }
+
+    public void updateVisibilityForAll() {
+        update(plugin.getNametagManager().getLines(player));
+    }
+
+    /* =========================
+       Spawn (all viewers)
+       ========================= */
+
+    public void spawn(List<Component> lines) {
+        despawn();
+
+        Location base = player.getLocation();
+
+        double baseYOffset = plugin.getConfig()
+                .getDouble("nametag.base-y-offset", 0.35);
+
+        double baseY = player.getEyeHeight() + baseYOffset;
+
+        float scale = (float) plugin.getConfig()
+                .getDouble("nametag.scale", 0.7);
+
+        for (int i = 0; i < lines.size(); i++) {
+            ClientTextDisplay display = new ClientTextDisplay(base);
+
+            display.setText(lines.get(i));
+            display.setTextShadow(true);
+            display.setSeeThrough(true);
+
+            display.setScale(new Vector3f(scale, scale, scale));
+
+            double yOffset =
+                    baseY
+                    - (i * LINE_SPACING * scale)
+                    + getCustomLineOffset(i + 1);
+
+            display.setTranslation(new Vector3f(0f, (float) yOffset, 0f));
+
+            display.spawn(player);
+            displays.add(display);
+        }
+
+        mountAll();
+    }
+
+    /* =========================
+       Spawn (single viewer)
+       ========================= */
+
+    private void spawnFor(Player viewer, List<Component> lines) {
+        // DisplayTags gốc không cache per-viewer display,
+        // nên vẫn dùng chung entity logic
+        spawn(lines);
+    }
+
+    /* =========================
+       Update text
+       ========================= */
+
+    public void update(List<Component> lines) {
+        if (displays.isEmpty()) {
+            spawn(lines);
+            return;
+        }
+
+        for (int i = 0; i < displays.size(); i++) {
+            if (i >= lines.size()) break;
+            displays.get(i).setText(lines.get(i));
         }
     }
 
-    public void update(Player viewer) {
-        Location baseLoc = player.getLocation();
+    /* =========================
+       Mount passengers
+       ========================= */
+
+    private void mountAll() {
+        if (displays.isEmpty()) return;
+
+        int[] passengers = displays.stream()
+                .mapToInt(ClientTextDisplay::getEntityId)
+                .toArray();
+
+        WrapperPlayServerSetPassengers packet =
+                new WrapperPlayServerSetPassengers(
+                        player.getEntityId(),
+                        passengers
+                );
+
+        PacketEvents.getAPI()
+                .getPlayerManager()
+                .sendPacket(player, packet);
+    }
+
+    /* =========================
+       Despawn
+       ========================= */
+
+    public void despawn() {
         for (ClientTextDisplay display : displays) {
-            display.setLocation(baseLoc);
+            display.despawn(player);
         }
+        displays.clear();
+    }
 
-        List<Component> textLines = getTextLines();
-        int count = Math.min(textLines.size(), displays.size());
-        for (int i = 0; i < count; i++) {
-            displays.get(i).setText(textLines.get(i));
-        }
+    private void despawnFor(Player viewer) {
+        despawn();
+    }
 
-        // Mount all displays in a single passengers packet so they don't overwrite each other.
-        int[] passengerIds = displays.stream().mapToInt(ClientTextDisplay::getEntityId).toArray();
-        WrapperPlayServerSetPassengers passengersPacket = new WrapperPlayServerSetPassengers(
-                this.player.getEntityId(),
-                passengerIds
+    /* =========================
+       Config helpers
+       ========================= */
+
+    private double getCustomLineOffset(int line) {
+        return plugin.getConfig().getDouble(
+                "nametag.line-y-offsets." + line,
+                0.0
         );
-        PacketEvents.getAPI().getPlayerManager().sendPacket(viewer, passengersPacket);
-
-        for (ClientTextDisplay display : displays) {
-            display.update(viewer);
-        }
-    }
-
-    private List<Component> getTextLines() {
-        List<Component> components = new ArrayList<>(Math.max(1, lines.size()));
-        DecimalFormat healthFormat = new DecimalFormat("#.##");
-
-        for (String line : lines) {
-            String modified = line
-                    .replace("{player}", player.getName())
-                    .replace("{health}", String.valueOf(healthFormat.format(player.getHealth())));
-
-            if (DependencyHelper.isPlaceholderAPIEnabled()) {
-                modified = PlaceholderAPI.setPlaceholders(player, modified);
-            }
-
-            components.add(ComponentUtils.format(modified));
-        }
-
-        if (components.isEmpty()) components.add(Component.empty());
-        return components;
-    }
-
-    private int getBackground() {
-        String background = plugin.config().getNametagConfig().getBackground();
-        if (background == null || background.equalsIgnoreCase("default")) return -1;
-        if (background.equalsIgnoreCase("transparent")) return 0;
-        if (background.startsWith("#")) background = background.substring(1);
-
-        Color color = Color.fromARGB((int) Long.parseLong(background, 16));
-        if (background.length() == 6) color = color.setAlpha(255);
-        return color.asARGB();
     }
 }
