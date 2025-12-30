@@ -34,7 +34,10 @@ public abstract class ClientDisplay {
        Abstract
        ========================= */
 
-    public abstract List<EntityData<?>> getEntityData();
+    public List<EntityData<?>> getEntityData() {
+    return new ArrayList<>();
+    }
+
 
     /* =========================
        Setters
