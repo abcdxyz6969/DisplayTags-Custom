@@ -55,13 +55,14 @@ public class Nametag {
         spawn(plugin.getNametagManager().getLines(player));
     }
 
-    public void hideForAll() {
-        despawn();
-    }
+    public void showForAll() {
+    // NametagManager sẽ gọi spawn(lines)
+   }
 
-    public void updateVisibilityForAll() {
-        update(plugin.getNametagManager().getLines(player));
-    }
+public void updateVisibilityForAll() {
+    // NametagManager sẽ gọi update(lines)
+   }
+
 
     /* =========================
        Spawn (all viewers)
