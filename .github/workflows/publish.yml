@@ -3,12 +3,6 @@ name: Build Plugin
 on:
   push:
     paths:
-      - 'src/**'
-      - 'build.gradle'
-      - 'build.gradle.kts'
-      - 'settings.gradle'
-      - 'gradle/**'
-      - 'gradlew'
       - 'gradlew.bat'
   workflow_dispatch:
 
