@@ -1,3 +1,4 @@
+// src/main/java/me/itsskeptical/displaytags/nametags/Nametag.java
 package me.itsskeptical.displaytags.nametags;
 
 import com.github.retrooper.packetevents.PacketEvents;
@@ -19,7 +20,6 @@ public class Nametag {
 
     private final List<ClientTextDisplay> displays = new ArrayList<>();
 
-    // Vanilla-like spacing
     private static final double LINE_SPACING = 0.23;
 
     public Nametag(DisplayTags plugin, Player player) {
@@ -27,59 +27,39 @@ public class Nametag {
         this.player = player;
     }
 
-    /* =========================
-       Getters
-       ========================= */
-
     public Player getPlayer() {
         return player;
     }
 
-    /* =========================
-       Visibility – per player
-       ========================= */
-
     public void show(Player viewer) {
-        spawnFor(viewer, plugin.getNametagManager().getLines(player));
+        // no-op (NametagManager controls spawn/update)
     }
 
     public void hide(Player viewer) {
-        despawnFor(viewer);
-    }
-
-    /* =========================
-       Visibility – all
-       ========================= */
-
-    public void showForAll() {
-        spawn(plugin.getNametagManager().getLines(player));
+        // no-op (NametagManager controls spawn/update)
     }
 
     public void showForAll() {
-    // NametagManager sẽ gọi spawn(lines)
-   }
+        // no-op (NametagManager calls spawn(lines))
+    }
 
-public void updateVisibilityForAll() {
-    // NametagManager sẽ gọi update(lines)
-   }
+    public void hideForAll() {
+        despawn();
+    }
 
-
-    /* =========================
-       Spawn (all viewers)
-       ========================= */
+    public void updateVisibilityForAll() {
+        // no-op (NametagManager calls update(lines))
+    }
 
     public void spawn(List<Component> lines) {
         despawn();
 
         Location base = player.getLocation();
 
-        double baseYOffset = plugin.getConfig()
-                .getDouble("nametag.base-y-offset", 0.35);
-
+        double baseYOffset = plugin.getConfig().getDouble("nametag.base-y-offset", 0.35);
         double baseY = player.getEyeHeight() + baseYOffset;
 
-        float scale = (float) plugin.getConfig()
-                .getDouble("nametag.scale", 0.7);
+        float scale = (float) plugin.getConfig().getDouble("nametag.scale", 0.7);
 
         for (int i = 0; i < lines.size(); i++) {
             ClientTextDisplay display = new ClientTextDisplay(base);
@@ -92,8 +72,8 @@ public void updateVisibilityForAll() {
 
             double yOffset =
                     baseY
-                    - (i * LINE_SPACING * scale)
-                    + getCustomLineOffset(i + 1);
+                            - (i * LINE_SPACING * scale)
+                            + getCustomLineOffset(i + 1);
 
             display.setTranslation(new Vector3f(0f, (float) yOffset, 0f));
 
@@ -104,35 +84,17 @@ public void updateVisibilityForAll() {
         mountAll();
     }
 
-    /* =========================
-       Spawn (single viewer)
-       ========================= */
-
-    private void spawnFor(Player viewer, List<Component> lines) {
-        // DisplayTags gốc không cache per-viewer display,
-        // nên vẫn dùng chung entity logic
-        spawn(lines);
-    }
-
-    /* =========================
-       Update text
-       ========================= */
-
     public void update(List<Component> lines) {
         if (displays.isEmpty()) {
             spawn(lines);
             return;
         }
 
-        for (int i = 0; i < displays.size(); i++) {
-            if (i >= lines.size()) break;
+        int n = Math.min(displays.size(), lines.size());
+        for (int i = 0; i < n; i++) {
             displays.get(i).setText(lines.get(i));
         }
     }
-
-    /* =========================
-       Mount passengers
-       ========================= */
 
     private void mountAll() {
         if (displays.isEmpty()) return;
@@ -142,19 +104,12 @@ public void updateVisibilityForAll() {
                 .toArray();
 
         WrapperPlayServerSetPassengers packet =
-                new WrapperPlayServerSetPassengers(
-                        player.getEntityId(),
-                        passengers
-                );
+                new WrapperPlayServerSetPassengers(player.getEntityId(), passengers);
 
         PacketEvents.getAPI()
                 .getPlayerManager()
                 .sendPacket(player, packet);
     }
-
-    /* =========================
-       Despawn
-       ========================= */
 
     public void despawn() {
         for (ClientTextDisplay display : displays) {
@@ -163,18 +118,7 @@ public void updateVisibilityForAll() {
         displays.clear();
     }
 
-    private void despawnFor(Player viewer) {
-        despawn();
-    }
-
-    /* =========================
-       Config helpers
-       ========================= */
-
     private double getCustomLineOffset(int line) {
-        return plugin.getConfig().getDouble(
-                "nametag.line-y-offsets." + line,
-                0.0
-        );
+        return plugin.getConfig().getDouble("nametag.line-y-offsets." + line, 0.0);
     }
 }
