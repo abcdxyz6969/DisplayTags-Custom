@@ -37,7 +37,7 @@ public final class DisplayTags extends JavaPlugin {
         config.load();
 
         // Nametags
-        this.nametagManager = new NametagManager();
+        this.nametagManager = new NametagManager(this);
         this.nametagScheduler = new NametagScheduler(this);
         nametagScheduler.start();
 
@@ -74,7 +74,7 @@ public final class DisplayTags extends JavaPlugin {
             if (latest == null) return;
 
             if (latest.equals(version)) {
-                MessageHelper.success(sender, "This server is using the latest version of DisplayTags (v{latest}).".replace("{latest}", latest));
+                MessageHelper.success(sender, "This server is using the latest version of DisplayTags (v{latest}) - rioeyu edited version.".replace("{latest}", latest));
             } else {
                 List<String> text = new ArrayList<>();
                 text.add("This server is running an outdated version of DisplayTags (v{current})".replace("{current}", version));
