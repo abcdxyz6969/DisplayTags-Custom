@@ -1,10 +1,11 @@
+// src/main/java/me/itsskeptical/displaytags/entities/ClientTextDisplay.java
 package me.itsskeptical.displaytags.entities;
 
 import com.github.retrooper.packetevents.protocol.entity.data.EntityData;
 import com.github.retrooper.packetevents.protocol.entity.data.EntityDataTypes;
+import com.github.retrooper.packetevents.protocol.entity.type.EntityTypes;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Location;
-import com.github.retrooper.packetevents.protocol.entity.type.EntityType;
 
 import java.util.List;
 
@@ -14,7 +15,7 @@ public class ClientTextDisplay extends ClientDisplay {
     private int flags = 0;
 
     public ClientTextDisplay(Location location) {
-        super(EntityType.TEXT_DISPLAY, location);
+        super(EntityTypes.TEXT_DISPLAY, location);
     }
 
     public Component getText() {
